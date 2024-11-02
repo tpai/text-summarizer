@@ -10,6 +10,8 @@ from tqdm import tqdm
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters, ApplicationBuilder
 from youtube_transcript_api import YouTubeTranscriptApi
+from newspaper import Article
+from goose3 import Goose
 
 telegram_token = os.environ.get("TELEGRAM_TOKEN", "xxx")
 model = os.environ.get("LLM_MODEL", "gpt-3.5-turbo-16k")
@@ -35,12 +37,33 @@ def scrape_text_from_url(url):
         downloaded = trafilatura.fetch_url(url)
         text = trafilatura.extract(downloaded, include_formatting=True)
         if text is None:
-            return []
-        text_chunks = text.split("\n")
-        article_content = [text for text in text_chunks if text]
-        return article_content
+            raise ValueError("Trafilatura returned None")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Trafilatura failed: {e}")
+        try:
+            print("Trying newspaper3k...")
+            article = Article(url)
+            article.download()
+            article.parse()
+            text = article.text
+            if not text:
+                raise ValueError("Newspaper3k returned empty text")
+        except Exception as e:
+            print(f"Newspaper3k failed: {e}")
+            try:
+                print("Trying Goose3...")
+                g = Goose()
+                article = g.extract(url=url)
+                text = article.cleaned_text
+                if not text:
+                    raise ValueError("Goose3 returned empty text")
+            except Exception as e:
+                print(f"Goose3 failed: {e}")
+                return []
+
+    text_chunks = text.split("\n")
+    article_content = [text for text in text_chunks if text]
+    return article_content
 
 async def search_results(keywords):
     print(keywords, ddg_region)

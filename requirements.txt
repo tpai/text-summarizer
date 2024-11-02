@@ -10,6 +10,12 @@ litellm==1.37.9
 # text extraction
 trafilatura==1.9.0 
 
+# text extraction alternative
+newspaper3k==0.2.8
+
+# text extraction alternative
+goose3==3.1.8
+
 # duckduckgo
 duckduckgo_search==5.3.0b4
 
